@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
+	"vang/function/models"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -10,13 +13,14 @@ import (
 func SaveMessages(c *fiber.Ctx) error {
 	fmt.Println("saving messages")
 	// log.Info("[SaveMessages] hit ...")
-	// // Create the model object
-	// model := new(models.SaveMessagesModel)
-	// if err := c.BodyParser(model); err != nil {
-	// 	errorMessage := fmt.Sprintf("Parse SaveMessagesModel Error %s", err.Error())
-	// 	log.Error(errorMessage)
-	// 	return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/parseModel", "Error happened while parsing model!"))
-	// }
+	// Create the model object
+	model := new(models.SaveMessagesModel)
+	if err := c.BodyParser(model); err != nil {
+		errorMessage := fmt.Sprintf("Parse SaveMessagesModel Error %s", err.Error())
+		fmt.Println(errorMessage)
+		return c.Status(http.StatusInternalServerError).JSON(errors.New("internal/parseModel, Error happened while parsing model!"))
+	}
+	fmt.Println(model)
 
 	// // Room service
 	// roomService, roomServiceErr := service.NewRoomService(database.Db)
