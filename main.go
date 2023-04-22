@@ -11,8 +11,7 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
-
-	function "example.com/function"
+	"vang/function"
 )
 
 var (
@@ -21,9 +20,6 @@ var (
 
 const defaultTimeout = 10 * time.Second
 
-// It reads two environment variables, "read_timeout" and "write_timeout,"
-// to set the read and write timeouts for the server. If these environment
-// variables are not set, defaultTimeout value will be used for both.
 func main() {
 	fmt.Println("Jai Shree Ram")
 	readTimeout := parseIntOrDurationValue(os.Getenv("read_timeout"), defaultTimeout)
@@ -35,17 +31,12 @@ func main() {
 		WriteTimeout:   writeTimeout,
 		MaxHeaderBytes: 1 << 20, // Max header of 1MB
 	}
-	fmt.Println("line : 35")
+
 	http.HandleFunc("/", function.Handle)
-	fmt.Println("line : 37")
+
 	listenUntilShutdown(s, writeTimeout)
-	fmt.Println("line : 39")
 }
 
-// The function starts a goroutine that listens for the SIGTERM signal
-// from the operating system. When the signal is received, the function
-// logs a message indicating that the server is shutting down and waits
-// for the specified shutdown timeout duration using the time.Tick function.
 func listenUntilShutdown(s *http.Server, shutdownTimeout time.Duration) {
 	idleConnsClosed := make(chan struct{})
 	go func() {
@@ -76,10 +67,7 @@ func listenUntilShutdown(s *http.Server, shutdownTimeout time.Duration) {
 			close(idleConnsClosed)
 		}
 	}()
-	// Finally, the function sets a global variable acceptingConnections to 1
-	// using the atomic.StoreInt32 function and waits for the idleConnsClosed
-	// channel to be closed. This indicates that all idle connections have
-	// been closed, and the function can safely exit.
+
 	atomic.StoreInt32(&acceptingConnections, 1)
 
 	<-idleConnsClosed

@@ -1,156 +1,191 @@
 package handlers
 
-import (
-	"fmt"
-	"net/http"
+// import (
+// 	"fmt"
+// 	"net/http"
 
-	"example.com/core/pkg/log"
-	"example.com/core/pkg/parser"
-	"example.com/core/types"
-	utils "example.com/core/utils"
-	"example.com/function/database"
-	service "example.com/function/services"
-	"github.com/gofiber/fiber/v2"
-	uuid "github.com/gofrs/uuid"
-)
+// 	"github.com/gofiber/fiber/v2"
+// 	uuid "github.com/gofrs/uuid"
+// 	"github.com/red-gold/telar-core/pkg/log"
+// 	"github.com/red-gold/telar-core/types"
+// 	utils "github.com/red-gold/telar-core/utils"
+// 	"github.com/red-gold/ts-serverless/micros/vang/database"
+// 	models "github.com/red-gold/ts-serverless/micros/vang/models"
+// 	service "github.com/red-gold/ts-serverless/micros/vang/services"
+// )
 
-type UserRelQueryModel struct {
-	Search string    `query:"search"`
-	Page   int64     `query:"page"`
-	Owner  uuid.UUID `query:"owner"`
-}
+// // QueryMessagesHandle handle query on vang
+// func QueryMessagesHandle(c *fiber.Ctx) error {
 
-// QueryUserRelHandle handle query on userRel
-func QueryUserRelHandle(c *fiber.Ctx) error {
+// 	// Parse model object
+// 	model := new(models.QueryMessageModel)
+// 	if err := c.BodyParser(model); err != nil {
+// 		errorMessage := fmt.Sprintf("Parse SaveMessagesModel Error %s", err.Error())
+// 		log.Error(errorMessage)
+// 		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/parseModel", "Error happened while parsing model!"))
+// 	}
 
-	// Create service
-	userRelService, serviceErr := service.NewUserRelService(database.Db)
-	if serviceErr != nil {
-		log.Error("NewUserRelService %s", serviceErr.Error())
-		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/userRelService", "Error happened while creating userRelService!"))
-	}
+// 	currentUser, ok := c.Locals(types.UserCtxName).(types.UserContext)
+// 	if !ok {
+// 		log.Error("[QueryMessagesHandle] Can not get current user")
+// 		return c.Status(http.StatusBadRequest).JSON(utils.Error("invalidCurrentUser",
+// 			"Can not get current user"))
+// 	}
 
-	query := new(UserRelQueryModel)
+// 	if model.ReqUserId != currentUser.UserID {
+// 		errorMessage := fmt.Sprintf("Request user id is not equal.")
+// 		log.Error(errorMessage)
+// 		return c.Status(http.StatusBadRequest).JSON(utils.Error("reqUserIdNotEqual", errorMessage))
+// 	}
 
-	if err := parser.QueryParser(c, query); err != nil {
-		log.Error("[QueryUserRelHandle] QueryParser %s", err.Error())
-		return c.Status(http.StatusBadRequest).JSON(utils.Error("queryParser", "Error happened while parsing query!"))
-	}
+// 	// Create service
+// 	vangService, serviceErr := service.NewMessageService(database.Db)
+// 	if serviceErr != nil {
+// 		log.Error("NewMessageService %s", serviceErr.Error())
+// 		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/messageService", "Error happened while creating messageService!"))
+// 	}
 
-	userRelList, err := userRelService.QueryUserRel(query.Search, &query.Owner, "created_date", query.Page)
-	if err != nil {
-		log.Error("[QueryUserRelHandle.userRelService.QueryUserRel] %s", err.Error())
-		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/queryUserRel", "Error happened while reading followers!"))
-	}
+// 	if model.RoomId == uuid.Nil {
+// 		errorMessage := fmt.Sprintf("Room id can not be empty.")
+// 		log.Error(errorMessage)
+// 		return c.Status(http.StatusBadRequest).JSON(utils.Error("roomIdIsRequired", errorMessage))
 
-	return c.JSON(userRelList)
-}
+// 	}
 
-// GetUserRelHandle handle get a userRel
-func GetUserRelHandle(c *fiber.Ctx) error {
+// 	vangList, err := vangService.GetMessageByRoomId(&model.RoomId, "createdDate", model.Page, model.Lte, model.Gte)
+// 	if err != nil {
+// 		log.Error("[QueryMessagesHandle.vangService.GetMessageByRoomId] %s", err.Error())
+// 		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/getMessages", "Error happened while reading messages!"))
+// 	}
 
-	// Create service
-	userRelService, serviceErr := service.NewUserRelService(database.Db)
-	if serviceErr != nil {
-		log.Error("NewUserRelService %s", serviceErr.Error())
-		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/userRelService", "Error happened while creating userRelService!"))
-	}
-	userRelId := c.Params("userRelId")
-	if userRelId == "" {
-		errorMessage := fmt.Sprintf("UserRel Id is required!")
-		log.Error(errorMessage)
-		return c.Status(http.StatusBadRequest).JSON(utils.Error("userRelIdRequired", errorMessage))
+// 	return c.JSON(vangList)
+// }
 
-	}
+// // GetActiveRoomHandle handle get an active room
+// func GetActiveRoomHandle(c *fiber.Ctx) error {
 
-	userRelUUID, uuidErr := uuid.FromString(userRelId)
-	if uuidErr != nil {
-		errorMessage := fmt.Sprintf("UUID Error %s", uuidErr.Error())
-		log.Error(errorMessage)
-		return c.Status(http.StatusBadRequest).JSON(utils.Error("userRelIdIsNotValid", "user rel id is not valid!"))
-	}
+// 	roomId := c.Params("roomId")
+// 	if roomId == "" {
+// 		errorMessage := fmt.Sprintf("Room id can not be empty.")
+// 		log.Error(errorMessage)
+// 		return c.Status(http.StatusBadRequest).JSON(utils.Error("roomIdIsRequired", errorMessage))
+// 	}
+// 	roomUUID, err := uuid.FromString(roomId)
+// 	if err != nil {
+// 		log.Error("[GetActiveRoomHandle] %s", err.Error())
+// 		return c.Status(http.StatusBadRequest).JSON(utils.Error("roomIdIsInvalid", "Room id is invalid"))
+// 	}
 
-	foundUserRel, err := userRelService.FindById(userRelUUID)
-	if err != nil {
-		log.Error("[GetUserRelHandle.userRelService.FindById] %s", err.Error())
-		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/findById", "Error happened while reading followers!"))
-	}
+// 	currentUser, ok := c.Locals(types.UserCtxName).(types.UserContext)
+// 	if !ok {
+// 		log.Error("[QueryMessagesHandle] Can not get current user")
+// 		return c.Status(http.StatusBadRequest).JSON(utils.Error("invalidCurrentUser",
+// 			"Can not get current user"))
+// 	}
 
-	return c.JSON(foundUserRel)
-}
+// 	// Create service
+// 	roomService, serviceErr := service.NewRoomService(database.Db)
+// 	if serviceErr != nil {
+// 		log.Error("NewRoomService %s", serviceErr.Error())
+// 		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/roomService", "Error happened while creating roomService!"))
+// 	}
 
-// GetFollowersHandle handle get auth user followers
-func GetFollowersHandle(c *fiber.Ctx) error {
+// 	room, findRoomErr := roomService.GetActiveRoom(roomUUID, []string{currentUser.UserID.String()})
+// 	if findRoomErr != nil {
+// 		log.Error("[GetUserRooms.roomService.GetRoomsByUserId] %s", findRoomErr.Error())
+// 		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/findRoom", "Error happened while finding room!"))
+// 	}
 
-	// Create service
-	fmt.Println("creating service")
-	userRelService, serviceErr := service.NewUserRelService(database.Db)
-	if serviceErr != nil {
-		log.Error("NewUserRelService %s", serviceErr.Error())
-		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/userRelService", "Error happened while creating userRelService!"))
-	}
+// 	return c.JSON(room)
+// }
 
-	// currentUser, ok := c.Locals(types.UserCtxName).(types.UserContext)
-	// if !ok {
-	// 	log.Error("[GetFollowersHandle] Can not get current user")
-	// 	return c.Status(http.StatusBadRequest).JSON(utils.Error("invalidCurrentUser",
-	// 		"Can not get current user"))
-	// }
-	currentUser := types.UserContext{
+// // GetUserRooms handle active peer room
+// func GetUserRooms(c *fiber.Ctx) error {
 
-		DisplayName: "Current User",
-		Avatar:      "Current User Avatar",
-	}
-	var uuidErr error
-	currentUser.UserID, uuidErr = uuid.NewV4()
-	if uuidErr != nil {
-		return uuidErr
-	}
+// 	// Parse model object
+// 	model := new(models.GetUserRoomsModel)
+// 	if err := c.BodyParser(model); err != nil {
+// 		errorMessage := fmt.Sprintf("Parse SaveMessagesModel Error %s", err.Error())
+// 		log.Error(errorMessage)
+// 		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/parseModel", "Error happened while parsing model!"))
+// 	}
 
-	fmt.Println("getting followers 110")
-	followers, err := userRelService.GetFollowers(currentUser.UserID)
-	if err != nil {
-		log.Error("[GetFollowersHandle.userRelService.GetFollowers] %s", err.Error())
-		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/getFollowers", "Error happened while reading followers!"))
-	}
-	fmt.Println("got followers ", followers)
-	return c.JSON(followers)
-}
+// 	// Create service
+// 	roomService, serviceErr := service.NewRoomService(database.Db)
+// 	if serviceErr != nil {
+// 		log.Error("NewRoomService %s", serviceErr.Error())
+// 		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/roomService", "Error happened while creating roomService!"))
+// 	}
 
-// GetFollowingHandle handle get auth user following
-func GetFollowingHandle(c *fiber.Ctx) error {
+// 	rooms, findRoomErr := roomService.GetRoomsByUserId(model.UserId.String(), 0)
+// 	if findRoomErr != nil {
+// 		log.Error("[GetUserRooms.roomService.GetRoomsByUserId] %s", findRoomErr.Error())
+// 		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/findRoom", "Error happened while finding room!"))
+// 	}
 
-	// Create service
-	fmt.Println("inside GetFollowingHandle")
-	userRelService, serviceErr := service.NewUserRelService(database.Db)
-	if serviceErr != nil {
-		log.Error("NewUserRelService %s", serviceErr.Error())
-		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/userRelService", "Error happened while creating userRelService!"))
-	}
+// 	if len(rooms) == 0 {
+// 		return c.JSON(fiber.Map{
+// 			"rooms":   fiber.Map{},
+// 			"roomIds": []string{},
+// 		})
+// 	}
 
-	// currentUser, ok := c.Locals(types.UserCtxName).(types.UserContext)
-	// if !ok {
-	// 	log.Error("[GetFollowingHandle] Can not get current user")
-	// 	return c.Status(http.StatusBadRequest).JSON(utils.Error("invalidCurrentUser",
-	// 		"Can not get current user"))
-	// }
-	fmt.Println("creating current user")
-	currentUser := types.UserContext{
+// 	// Use map to record duplicates as we find them.
+// 	encountered := map[string]bool{}
 
-		DisplayName: "Current User",
-		Avatar:      "Current User Avatar",
-	}
-	var uuidErr error
-	currentUser.UserID, uuidErr = uuid.NewV4()
-	if uuidErr != nil {
-		return uuidErr
-	}
-	fmt.Println("getting follower")
-	following, err := userRelService.GetFollowing(currentUser.UserID)
-	if err != nil {
-		log.Error("[GetFollowingHandle.userRelService.GetFollowing] %s", err.Error())
-		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/getFollowing", "Error happened while reading following!"))
-	}
-	fmt.Println("number of people following : ", following)
-	return c.JSON(following)
-}
+// 	var allMembers []string
+
+// 	// Map to response model
+// 	var resRooms models.ResUserRoomModel
+// 	resRooms.Rooms = make(map[string]interface{})
+// 	for _, v := range rooms {
+// 		roomId := v.ObjectId.String()
+// 		mappedRoom := make(map[string]interface{})
+// 		mappedRoom["objectId"] = roomId
+// 		mappedRoom["members"] = v.Members
+// 		mappedRoom["type"] = v.Type
+// 		mappedRoom["readDate"] = v.ReadDate
+// 		mappedRoom["readCount"] = v.ReadCount
+// 		mappedRoom["readMessageId"] = v.ReadMessageId
+// 		mappedRoom["deactiveUsers"] = v.DeactiveUsers
+// 		mappedRoom["lastMessage"] = v.LastMessage
+// 		mappedRoom["memberCount"] = v.MemberCount
+// 		mappedRoom["messageCount"] = v.MessageCount
+// 		mappedRoom["createdDate"] = v.CreatedDate
+// 		mappedRoom["updatedDate"] = v.UpdatedDate
+
+// 		resRooms.Rooms[roomId] = mappedRoom
+// 		resRooms.RoomIds = append(resRooms.RoomIds, roomId)
+
+// 		// Merge members into a single array
+// 		for _, v := range v.Members[:2] {
+// 			if encountered[v] != true {
+// 				encountered[v] = true
+// 				allMembers = append(allMembers, v)
+// 			}
+// 		}
+// 	}
+
+// 	dispatchProfileModel := models.DispatchProfilesModel{
+// 		UserIds:   allMembers,
+// 		ReqUserId: model.UserId,
+// 	}
+
+// 	currentUser, ok := c.Locals(types.UserCtxName).(types.UserContext)
+// 	if !ok {
+// 		log.Error("[GetUserRooms] Can not get current user")
+// 		return c.Status(http.StatusBadRequest).JSON(utils.Error("invalidCurrentUser",
+// 			"Can not get current user"))
+// 	}
+// 	log.Info("[GetUserRooms] Current USER %v ", currentUser)
+// 	userInfoInReq := &UserInfoInReq{
+// 		UserId:      currentUser.UserID,
+// 		Username:    currentUser.Username,
+// 		Avatar:      currentUser.Avatar,
+// 		DisplayName: currentUser.DisplayName,
+// 		SystemRole:  currentUser.SystemRole,
+// 	}
+// 	go dispatchProfileByUserIds(dispatchProfileModel, userInfoInReq)
+
+// 	return c.JSON(resRooms)
+// }

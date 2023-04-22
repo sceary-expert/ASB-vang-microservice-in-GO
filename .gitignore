@@ -1,7 +1,3 @@
 .exe
-.pub
-.txt
-.env
-mongo-database
-mongo-host
-payload-secret
+go.mod
+go.sum

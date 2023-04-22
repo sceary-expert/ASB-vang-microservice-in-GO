@@ -2,116 +2,102 @@ package handlers
 
 import (
 	"fmt"
-	"net/http"
 
-	"example.com/core/pkg/log"
-	"example.com/core/types"
-	"example.com/core/utils"
-	"example.com/function/database"
-	domain "example.com/function/dto"
-	socialModels "example.com/function/models"
-	service "example.com/function/services"
 	"github.com/gofiber/fiber/v2"
 )
 
-// CreateUserRelHandle handle create a new userRel
-func CreateUserRelHandle(c *fiber.Ctx) error {
+// CreateMessageHandle handle create a new vang
+func SaveMessages(c *fiber.Ctx) error {
+	fmt.Println("saving messages")
+	// log.Info("[SaveMessages] hit ...")
+	// // Create the model object
+	// model := new(models.SaveMessagesModel)
+	// if err := c.BodyParser(model); err != nil {
+	// 	errorMessage := fmt.Sprintf("Parse SaveMessagesModel Error %s", err.Error())
+	// 	log.Error(errorMessage)
+	// 	return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/parseModel", "Error happened while parsing model!"))
+	// }
 
-	// Create the model object
-	model := new(domain.UserRel)
-	if err := c.BodyParser(model); err != nil {
-		errorMessage := fmt.Sprintf("Parse UserRel Error %s", err.Error())
-		log.Error(errorMessage)
-		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/parseModel", "Error happened while parsing model!"))
-	}
-	// Create service
-	userRelService, serviceErr := service.NewUserRelService(database.Db)
-	if serviceErr != nil {
-		log.Error("NewUserRelService %s", serviceErr.Error())
-		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/userRelService", "Error happened while creating userRelService!"))
-	}
+	// // Room service
+	// roomService, roomServiceErr := service.NewRoomService(database.Db)
+	// if roomServiceErr != nil {
+	// 	log.Error("NewRoomService %s", roomServiceErr.Error())
+	// 	return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/roomService", "Error happened while creating roomService!"))
+	// }
 
-	if err := userRelService.SaveUserRel(model); err != nil {
-		errorMessage := fmt.Sprintf("Save UserRel Error %s", err.Error())
-		log.Error(errorMessage)
-		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/saveUserRel", "Error happened while saving UserRel!"))
-	}
+	// log.Info("[SaveMessages] saving message model.RoomId: %s", model.RoomId)
 
-	return c.JSON(fiber.Map{
-		"objectId": model.ObjectId.String(),
-	})
+	// // Message service
+	// messageService, messageServiceErr := service.NewMessageService(database.Db)
+	// if messageServiceErr != nil {
+	// 	log.Error("NewMessageService %s", messageServiceErr.Error())
+	// 	return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/messageService", "Error happened while creating messageService!"))
+	// }
 
-}
+	// log.Info("[SaveMessages] message saves")
 
-// FollowHandle handle create a new userRel
-func FollowHandle(c *fiber.Ctx) error {
-	// a -> b
-	fmt.Println("at follow handle function")
-	// Create the model object
-	model := new(socialModels.FollowModel)
-	fmt.Println("model has been assigned")
-	if err := c.BodyParser(model); err != nil {
-		errorMessage := fmt.Sprintf("Parse UserRel Error %s", err.Error())
-		log.Error(errorMessage)
-		fmt.Println("error ", errorMessage)
-		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/parseModel", "Error happened while parsing model!"))
-	}
+	// // Map message model to DTO
+	// var messages []dto.Message
+	// for _, v := range model.Messages {
+	// 	newMessage := dto.Message{
+	// 		ObjectId:    v.ObjectId,
+	// 		OwnerUserId: v.OwnerUserId,
+	// 		RoomId:      v.RoomId,
+	// 		Text:        v.Text,
+	// 		CreatedDate: utils.UTCNowUnix(),
+	// 		UpdatedDate: utils.UTCNowUnix(),
+	// 	}
+	// 	messages = append(messages, newMessage)
+	// }
 
-	// Create service
-	fmt.Println("creating service")
-	userRelService, serviceErr := service.NewUserRelService(database.Db)
-	if serviceErr != nil {
-		log.Error("NewUserRelService %s", serviceErr.Error())
-		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/userRelService", "Error happened while creating userRelService!"))
-	}
-	fmt.Println("creating current user") //the code is coming till line no. 66 as we have added a dummy rel meta model to pass the body parser
+	// var maxDate int64
+	// var lastMessage *dto.Message
+	// // Get last messsage
+	// for _, v := range messages {
+	// 	if v.CreatedDate > maxDate {
+	// 		maxDate = v.CreatedDate
+	// 		lastMessage = &v
+	// 	}
+	// }
+
 	// currentUser, ok := c.Locals(types.UserCtxName).(types.UserContext)
 	// if !ok {
-	// 	log.Error("[FollowHandle] Can not get current user")
+	// 	log.Error("[SaveMessages] Can not get current user")
 	// 	return c.Status(http.StatusBadRequest).JSON(utils.Error("invalidCurrentUser",
 	// 		"Can not get current user"))
 	// }
-	//creating a demo user current user
 
-	currentUser := types.UserContext{
+	// log.Info("[SaveMessages] currentUser: %s", currentUser.UserID)
 
-		DisplayName: "Current User",
-		Avatar:      "Current User Avatar",
-	}
+	// log.Info("[SaveMessages] check deactive peer id %s", model.DeactivePeerId)
+	// if model.DeactivePeerId != uuid.Nil && model.DeactivePeerId != currentUser.UserID {
+	// 	// Active peer id
+	// 	roomErr := roomService.ActiveAllPeerRoom(lastMessage.RoomId, []string{model.DeactivePeerId.String(), currentUser.UserID.String()}, model.DeactivePeerId)
+	// 	if roomErr != nil {
+	// 		log.Error("[SaveMessages] GetPeerRoom %s", roomErr.Error())
+	// 		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/roomService", "Error happened while getting room!"))
+	// 	}
+	// }
+	// log.Info("[SaveMessages] check deactive peer id end")
 
-	// Left User Meta
-	fmt.Println("creating left user meta")
-	leftUserMeta := domain.UserRelMeta{
-		// UserId:   currentUser.UserID,
-		FullName: currentUser.DisplayName,
-		Avatar:   currentUser.Avatar,
-	}
+	// // Increase room message count
+	// go func(currentUser types.UserContext) {
+	// 	log.Info("[SaveMessages] updating message meta")
+	// 	err := roomService.UpdateMessageMeta(model.RoomId, int64(len(messages)), lastMessage.CreatedDate, lastMessage.Text, currentUser.UserID.String())
+	// 	if err != nil {
+	// 		errorMessage := fmt.Sprintf("vang IncreaseMessageCount %s", err.Error())
+	// 		println(errorMessage)
+	// 	}
+	// 	log.Info("[SaveMessages] updating message meta end")
+	// }(currentUser)
+	// log.Info("[SaveMessages] Saving message")
 
-	// Right User Meta
-	fmt.Println("creating right user meta")
-	rightUserMeta := domain.UserRelMeta{
-		// UserId:   model.RightUser.UserId,
-		FullName: model.RightUser.FullName,
-		Avatar:   model.RightUser.Avatar,
-	}
+	// if err := messageService.SaveManyMessages(messages); err != nil {
+	// 	errorMessage := fmt.Sprintf("Save many messages %s", err.Error())
+	// 	log.Error(errorMessage)
+	// 	return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/saveMessage", "Error happened while saving message!"))
+	// }
 
-	// Store the relation
-	fmt.Println("storing the relation")
-	if err := userRelService.FollowUser(leftUserMeta, rightUserMeta, model.CircleIds, []string{"status:follow"}); err != nil {
-		errorMessage := fmt.Sprintf("Save UserRel Error %s", err.Error())
-		log.Error(errorMessage)
-		return c.Status(http.StatusInternalServerError).JSON(utils.Error("internal/saveUserRel", "Error happened while saving UserRel!"))
-	}
-
-	// Create notification
-	fmt.Println("creating notification")
-	go sendFollowNotification(model, getUserInfoReq(c))
-	// Increase user follow count
-	fmt.Println("increasing follow count")
-	go increaseUserFollowCount(currentUser.UserID, 1, getUserInfoReq(c))
-	// Increase user follower count
-	fmt.Println("increasing follower count")
-	go increaseUserFollowerCount(model.RightUser.UserId, 1, getUserInfoReq(c))
-
-	return c.SendStatus(http.StatusOK)
+	// return c.SendStatus(http.StatusOK)
+	return nil
 }

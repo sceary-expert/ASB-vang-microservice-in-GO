@@ -1,183 +1,241 @@
 package handlers
 
-import (
-	"bytes"
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"net/http"
+// import (
+// 	"bytes"
+// 	"encoding/hex"
+// 	"encoding/json"
+// 	"fmt"
+// 	"io/ioutil"
+// 	"net/http"
 
-	coreConfig "example.com/core/config"
-	"example.com/core/pkg/log"
-	"example.com/core/types"
-	"example.com/core/utils"
-	models "example.com/function/models"
-	socialModels "example.com/function/models"
-	"github.com/alexellis/hmac"
-	"github.com/gofiber/fiber/v2"
-	uuid "github.com/gofrs/uuid"
-)
+// 	"github.com/alexellis/hmac"
+// 	"github.com/gofiber/fiber/v2"
+// 	"github.com/gofrs/uuid"
+// 	coreConfig "github.com/red-gold/telar-core/config"
+// 	log "github.com/red-gold/telar-core/pkg/log"
+// 	"github.com/red-gold/telar-core/types"
+// 	"github.com/red-gold/telar-core/utils"
+// 	models "github.com/red-gold/ts-serverless/micros/vang/models"
+// )
 
-type UserInfoInReq struct {
-	UserId      uuid.UUID `json:"uid"`
-	Username    string    `json:"email"`
-	DisplayName string    `json:"displayName"`
-	SocialName  string    `json:"socialName"`
-	Avatar      string    `json:"avatar"`
-	Banner      string    `json:"banner"`
-	TagLine     string    `json:"tagLine"`
-	SystemRole  string    `json:"role"`
-	CreatedDate int64     `json:"createdDate"`
-}
+// type Action struct {
+// 	Type    string      `json:"type"`
+// 	Payload interface{} `json:"payload"`
+// }
 
-// getHeadersFromUserInfoReq
-func getHeadersFromUserInfoReq(info *UserInfoInReq) map[string][]string {
-	userHeaders := make(map[string][]string)
-	userHeaders["uid"] = []string{info.UserId.String()}
-	userHeaders["email"] = []string{info.Username}
-	userHeaders["avatar"] = []string{info.Avatar}
-	userHeaders["banner"] = []string{info.Banner}
-	userHeaders["tagLine"] = []string{info.TagLine}
-	userHeaders["displayName"] = []string{info.DisplayName}
-	userHeaders["socialName"] = []string{info.SocialName}
-	userHeaders["role"] = []string{info.SystemRole}
+// type UserInfoInReq struct {
+// 	UserId      uuid.UUID `json:"userId"`
+// 	Username    string    `json:"username"`
+// 	Avatar      string    `json:"avatar"`
+// 	DisplayName string    `json:"displayName"`
+// 	SystemRole  string    `json:"systemRole"`
+// }
 
-	return userHeaders
-}
+// // getHeadersFromUserInfoReq
+// func getHeadersFromUserInfoReq(info *UserInfoInReq) map[string][]string {
+// 	userHeaders := make(map[string][]string)
+// 	userHeaders["uid"] = []string{info.UserId.String()}
+// 	userHeaders["email"] = []string{info.Username}
+// 	userHeaders["avatar"] = []string{info.Avatar}
+// 	userHeaders["displayName"] = []string{info.DisplayName}
+// 	userHeaders["role"] = []string{info.SystemRole}
 
-// getUserInfoReq
-func getUserInfoReq(c *fiber.Ctx) *UserInfoInReq {
-	fmt.Println("coming to getUserInfoReq func")
-	currentUser, ok := c.Locals("user").(types.UserContext)
-	if !ok {
-		return &UserInfoInReq{}
-	}
-	fmt.Println("current user is assigned")
-	userInfoInReq := &UserInfoInReq{
-		UserId:      currentUser.UserID,
-		Username:    currentUser.Username,
-		Avatar:      currentUser.Avatar,
-		DisplayName: currentUser.DisplayName,
-		SystemRole:  currentUser.SystemRole,
-	}
-	fmt.Println("userInfoReq is created")
-	return userInfoInReq
+// 	return userHeaders
+// }
 
-}
+// // getUserInfoReq
+// func getUserInfoReqFromCurrentUser(currentUser types.UserContext) *UserInfoInReq {
+// 	userInfoInReq := &UserInfoInReq{
+// 		UserId:      currentUser.UserID,
+// 		Username:    currentUser.Username,
+// 		Avatar:      currentUser.Avatar,
+// 		DisplayName: currentUser.DisplayName,
+// 		SystemRole:  currentUser.SystemRole,
+// 	}
+// 	return userInfoInReq
+// }
 
-// getHeaderInfoReq
-func getHeaderInfoReq(c *fiber.Ctx) map[string][]string {
-	return getHeadersFromUserInfoReq(getUserInfoReq(c))
-}
+// // getUserInfoReq
+// func getUserInfoReq(c *fiber.Ctx) *UserInfoInReq {
+// 	currentUser, ok := c.Locals("user").(types.UserContext)
+// 	if !ok {
+// 		return &UserInfoInReq{}
+// 	}
+// 	return getUserInfoReqFromCurrentUser(currentUser)
 
-// functionCall send request to another function/microservice using HMAC validation
-func functionCall(method string, bytesReq []byte, url string, header map[string][]string) ([]byte, error) {
-	prettyURL := utils.GetPrettyURLf(url)
-	bodyReader := bytes.NewBuffer(bytesReq)
+// }
 
-	httpReq, httpErr := http.NewRequest(method, *coreConfig.AppConfig.InternalGateway+prettyURL, bodyReader)
-	if httpErr != nil {
-		return nil, httpErr
-	}
+// // functionCall send request to another function/microservice using HMAC validation
+// func functionCall(method string, bytesReq []byte, url string, header map[string][]string) ([]byte, error) {
+// 	prettyURL := utils.GetPrettyURLf(url)
+// 	bodyReader := bytes.NewBuffer(bytesReq)
 
-	digest := hmac.Sign(bytesReq, []byte(*coreConfig.AppConfig.PayloadSecret))
-	httpReq.Header.Set("Content-type", "application/json")
-	fmt.Printf("\ndigest: %s, header: %v \n", "sha1="+hex.EncodeToString(digest), types.HeaderHMACAuthenticate)
-	httpReq.Header.Add(types.HeaderHMACAuthenticate, "sha1="+hex.EncodeToString(digest))
+// 	httpReq, httpErr := http.NewRequest(method, *coreConfig.AppConfig.InternalGateway+prettyURL, bodyReader)
+// 	if httpErr != nil {
+// 		return nil, httpErr
+// 	}
 
-	if header != nil {
-		for k, v := range header {
-			httpReq.Header[k] = v
-		}
-	}
+// 	digest := hmac.Sign(bytesReq, []byte(*coreConfig.AppConfig.PayloadSecret))
+// 	httpReq.Header.Set("Content-type", "application/json")
+// 	fmt.Printf("\ndigest: %s, header: %v \n", "sha1="+hex.EncodeToString(digest), types.HeaderHMACAuthenticate)
+// 	httpReq.Header.Add(types.HeaderHMACAuthenticate, "sha1="+hex.EncodeToString(digest))
 
-	c := http.Client{}
-	res, reqErr := c.Do(httpReq)
-	fmt.Printf("\nRes: %v\n", res)
-	if reqErr != nil {
-		return nil, fmt.Errorf("Error while sending admin check request!: %s", reqErr.Error())
-	}
-	if res.Body != nil {
-		defer res.Body.Close()
-	}
+// 	if header != nil {
+// 		for k, v := range header {
+// 			httpReq.Header[k] = v
+// 		}
+// 	}
 
-	resData, readErr := ioutil.ReadAll(res.Body)
-	if resData == nil || readErr != nil {
-		return nil, fmt.Errorf("failed to read response from admin check request.")
-	}
+// 	c := http.Client{}
+// 	res, reqErr := c.Do(httpReq)
+// 	fmt.Printf("\nRes: %v\n", res)
+// 	if reqErr != nil {
+// 		return nil, fmt.Errorf("Error while sending admin check request!: %s", reqErr.Error())
+// 	}
+// 	if res.Body != nil {
+// 		defer res.Body.Close()
+// 	}
 
-	if res.StatusCode != http.StatusAccepted && res.StatusCode != http.StatusOK {
-		if res.StatusCode == http.StatusNotFound {
-			return nil, NotFoundHTTPStatusError
-		}
-		return nil, fmt.Errorf("failed to call %s api, invalid status: %s", prettyURL, res.Status)
-	}
+// 	resData, readErr := ioutil.ReadAll(res.Body)
+// 	if resData == nil || readErr != nil {
+// 		return nil, fmt.Errorf("failed to read response from admin check request.")
+// 	}
 
-	return resData, nil
-}
+// 	if res.StatusCode != http.StatusAccepted && res.StatusCode != http.StatusOK {
+// 		if res.StatusCode == http.StatusNotFound {
+// 			return nil, NotFoundHTTPStatusError
+// 		}
+// 		return nil, fmt.Errorf("failed to call %s api, invalid status: %s", prettyURL, res.Status)
+// 	}
 
-// increaseUserFollowCount Increase user follow count
-func increaseUserFollowCount(userId uuid.UUID, inc int, userInfoInReq *UserInfoInReq) {
+// 	return resData, nil
+// }
 
-	actionURL := fmt.Sprintf("/profile/follow/inc/%d/%s", inc, userId.String())
+// // Dispatch action
+// func dispatchAction(action Action, roomId uuid.UUID, userInfoInReq *UserInfoInReq) {
 
-	// Create user headers for http request
-	userHeaders := getHeadersFromUserInfoReq(userInfoInReq)
+// 	actionURL := fmt.Sprintf("/actions/dispatch/%s", roomId.String())
 
-	_, actionErr := functionCall(http.MethodPut, []byte(actionURL), actionURL, userHeaders)
+// 	actionBytes, marshalErr := json.Marshal(action)
+// 	if marshalErr != nil {
+// 		errorMessage := fmt.Sprintf("Marshal notification Error %s", marshalErr.Error())
+// 		fmt.Println(errorMessage)
+// 	}
+// 	// Create user headers for http request
+// 	userHeaders := make(map[string][]string)
+// 	userHeaders["uid"] = []string{userInfoInReq.UserId.String()}
+// 	userHeaders["email"] = []string{userInfoInReq.Username}
+// 	userHeaders["avatar"] = []string{userInfoInReq.Avatar}
+// 	userHeaders["displayName"] = []string{userInfoInReq.DisplayName}
+// 	userHeaders["role"] = []string{userInfoInReq.SystemRole}
 
-	if actionErr != nil {
-		errorMessage := fmt.Sprintf("Function call error: %s - %s", actionURL, actionErr.Error())
-		log.Error(errorMessage)
-	}
-}
+// 	_, actionErr := functionCall(http.MethodPost, actionBytes, actionURL, userHeaders)
 
-// increaseUserFollowerCount Increase user follower count
-func increaseUserFollowerCount(userId uuid.UUID, inc int, userInfoInReq *UserInfoInReq) {
+// 	if actionErr != nil {
+// 		errorMessage := fmt.Sprintf("Cannot send action request! error: %s", actionErr.Error())
+// 		fmt.Println(errorMessage)
+// 	}
+// }
 
-	actionURL := fmt.Sprintf("/profile/follower/inc/%d/%s", inc, userId.String())
+// // getUserProfileByID Get user profile by user ID
+// func getUserProfileByID(userID uuid.UUID) (*models.UserProfileModel, error) {
+// 	profileURL := fmt.Sprintf("/profile/dto/id/%s", userID.String())
+// 	foundProfileData, err := functionCall(http.MethodGet, []byte(""), profileURL, nil)
+// 	if err != nil {
+// 		if err == NotFoundHTTPStatusError {
+// 			return nil, nil
+// 		}
+// 		log.Error("functionCall (%s) -  %s", profileURL, err.Error())
+// 		return nil, fmt.Errorf("getUserProfileByID/functionCall")
+// 	}
+// 	var foundProfile models.UserProfileModel
+// 	err = json.Unmarshal(foundProfileData, &foundProfile)
+// 	if err != nil {
+// 		log.Error("Unmarshal foundProfile -  %s", err.Error())
+// 		return nil, fmt.Errorf("getUserProfileByID/unmarshal")
+// 	}
+// 	return &foundProfile, nil
+// }
 
-	// Create user headers for http request
-	userHeaders := getHeadersFromUserInfoReq(userInfoInReq)
+// // getProfileBySocialName Get user profile by social name
+// func getProfileBySocialName(socialName string) (*models.UserProfileModel, error) {
+// 	profileURL := fmt.Sprintf("/profile/social/%s", socialName)
+// 	foundProfileData, err := functionCall(http.MethodGet, []byte(""), profileURL, nil)
+// 	if err != nil {
+// 		if err == NotFoundHTTPStatusError {
+// 			return nil, nil
+// 		}
+// 		log.Error("functionCall (%s) -  %s", profileURL, err.Error())
+// 		return nil, fmt.Errorf("getProfileBySocialName/functionCall")
+// 	}
+// 	var foundProfile models.UserProfileModel
+// 	err = json.Unmarshal(foundProfileData, &foundProfile)
+// 	if err != nil {
+// 		log.Error("Unmarshal foundProfile -  %s", err.Error())
+// 		return nil, fmt.Errorf("getProfileBySocialName/unmarshal")
+// 	}
+// 	return &foundProfile, nil
+// }
 
-	_, actionErr := functionCall(http.MethodPut, []byte(actionURL), actionURL, userHeaders)
+// // getProfilesByUserIds Get user profiles by user IDs
+// func getProfilesByUserIds(model models.GetProfilesModel, userInfoInReq *UserInfoInReq) ([]models.UserProfileModel, error) {
+// 	profileURL := "/profile/dto/ids"
+// 	body, marshalErr := json.Marshal(model)
+// 	if marshalErr != nil {
+// 		errorMessage := fmt.Sprintf("Marshal models.GetProfilesModel Error %s", marshalErr.Error())
+// 		fmt.Println(errorMessage)
+// 		return nil, marshalErr
+// 	}
 
-	if actionErr != nil {
-		errorMessage := fmt.Sprintf("Function call error: %s - %s", actionURL, actionErr.Error())
-		log.Error(errorMessage)
-	}
-}
+// 	// Create user headers for http request
+// 	userHeaders := make(map[string][]string)
+// 	userHeaders["uid"] = []string{userInfoInReq.UserId.String()}
+// 	userHeaders["email"] = []string{userInfoInReq.Username}
+// 	userHeaders["avatar"] = []string{userInfoInReq.Avatar}
+// 	userHeaders["displayName"] = []string{userInfoInReq.DisplayName}
+// 	userHeaders["role"] = []string{userInfoInReq.SystemRole}
 
-// sendFollowNotification Send follow notification
-func sendFollowNotification(model *socialModels.FollowModel, userInfoInReq *UserInfoInReq) {
+// 	foundProfilesData, err := functionCall(http.MethodPost, body, profileURL, nil)
+// 	if err != nil {
+// 		if err == NotFoundHTTPStatusError {
+// 			return nil, nil
+// 		}
+// 		log.Error("functionCall (%s) -  %s", profileURL, err.Error())
+// 		return nil, fmt.Errorf("getProfilesByUserIds/functionCall")
+// 	}
+// 	var foundProfile []models.UserProfileModel
+// 	err = json.Unmarshal(foundProfilesData, &foundProfile)
+// 	if err != nil {
+// 		log.Error("Unmarshal foundProfiles -  %s", err.Error())
+// 		return nil, fmt.Errorf("getProfilesByUserIds/unmarshal")
+// 	}
+// 	return foundProfile, nil
+// }
 
-	// Create user headers for http request
-	userHeaders := getHeadersFromUserInfoReq(userInfoInReq)
+// // dispatchProfileByUserIds Dispatch profile by user Ids
+// func dispatchProfileByUserIds(model models.DispatchProfilesModel, userInfoInReq *UserInfoInReq) error {
+// 	profileURL := "/profile/dispatch"
+// 	body, marshalErr := json.Marshal(model)
+// 	if marshalErr != nil {
+// 		errorMessage := fmt.Sprintf("Marshal models.DispatchProfilesModel Error %s", marshalErr.Error())
+// 		fmt.Println(errorMessage)
+// 	}
 
-	URL := fmt.Sprintf("/@/%s", userInfoInReq.SocialName)
-	notificationModel := &models.NotificationModel{
-		OwnerUserId:          userInfoInReq.UserId,
-		OwnerDisplayName:     userInfoInReq.DisplayName,
-		OwnerAvatar:          userInfoInReq.Avatar,
-		Title:                userInfoInReq.DisplayName,
-		Description:          fmt.Sprintf("%s is following you.", userInfoInReq.DisplayName),
-		URL:                  URL,
-		NotifyRecieverUserId: model.RightUser.UserId,
-		TargetId:             model.RightUser.UserId,
-		IsSeen:               false,
-		Type:                 "follow",
-	}
-	notificationBytes, marshalErr := json.Marshal(notificationModel)
-	if marshalErr != nil {
-		fmt.Printf("Cannot marshal notification! error: %s", marshalErr.Error())
+// 	// Create user headers for http request
+// 	userHeaders := make(map[string][]string)
+// 	userHeaders["uid"] = []string{userInfoInReq.UserId.String()}
+// 	userHeaders["email"] = []string{userInfoInReq.Username}
+// 	userHeaders["avatar"] = []string{userInfoInReq.Avatar}
+// 	userHeaders["displayName"] = []string{userInfoInReq.DisplayName}
+// 	userHeaders["role"] = []string{userInfoInReq.SystemRole}
 
-	}
-
-	notificationURL := "/notifications"
-	_, notificationIndexErr := functionCall(http.MethodPost, notificationBytes, notificationURL, userHeaders)
-	if notificationIndexErr != nil {
-		fmt.Printf("\nCannot save notification on follow user! error: %s\n", notificationIndexErr.Error())
-	}
-
-}
+// 	_, err := functionCall(http.MethodPost, body, profileURL, userHeaders)
+// 	if err != nil {
+// 		if err == NotFoundHTTPStatusError {
+// 			return nil
+// 		}
+// 		log.Error("functionCall (%s) -  %s", profileURL, err.Error())
+// 		return fmt.Errorf("dispatchProfileByUserIds/functionCall")
+// 	}
+// 	return nil
+// }
